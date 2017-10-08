@@ -1,0 +1,56 @@
+#!/usr/bin/env python3.6
+import subprocess
+from sys import argv
+from time import sleep
+from datetime import datetime, timezone, timedelta
+
+TZ = timezone(timedelta(hours=3))
+TARGET_TIME = datetime(2017, 10, 1, 23, 49, 0, tzinfo=TZ)
+
+
+def countdown():
+    delta = (TARGET_TIME - datetime.now(TZ)).total_seconds()
+
+    while delta > 0:
+        delta_int = int(delta)
+        sleep(delta - delta_int)
+        yield delta_int
+
+        delta = (TARGET_TIME - datetime.now(TZ)).total_seconds()
+
+
+def main(img_name, cont_id_file):
+    with open(cont_id_file, 'w') as fp:
+        res = subprocess.run(
+            [
+                'docker', 'run', '-itd', '--memory=256m', '--memory-swap=-1',
+                '-e', 'TERM', '--user', 'user', img_name, '/bin/bash'
+            ],
+            stdout=fp,
+            stderr=subprocess.DEVNULL,
+        )
+    if res.returncode != 0:
+        print('Error while creating container!')
+        exit(1)
+
+    first_round = True
+    for left in countdown():
+        if first_round:
+            print(f'Task will open in {left} seconds')
+            first_round = False
+        elif left > 10:
+            if left % 5 == 0:
+                print(f'Task will open in {left} seconds')
+        elif left != 0:
+            print(left)
+        else:
+            print('GO!')
+
+
+if __name__ == '__main__':
+    try:
+        main(argv[1], argv[2])
+    except BaseException:
+        exit(1)
+
+

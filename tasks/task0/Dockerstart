@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. "$SHELL_DST_DIR/shell_lib.sh"
+
+IMG_NAME="$1"
+CONT_ID_FILE="$2"
+
+docker run -it -d --memory=256m --memory-swap=-1 -e TERM --user user "$IMG_NAME" /bin/bash >"$CONT_ID_FILE"
