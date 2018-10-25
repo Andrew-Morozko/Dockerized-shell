@@ -41,7 +41,7 @@ def chatty_lock(lock_file):
 
 def main():
     try:
-        TASKS_HOME = Path(env['HOME'])
+        TASKS_HOME = Path(env['TASKS_HOME'])
         TASK_NAME = env['TASK_NAME']
         TASK_TMP_DIR = Path(env['TASK_TMP_DIR'])
         IP = env['SSH_CONNECTION'].split(' ', maxsplit=1)[0]
