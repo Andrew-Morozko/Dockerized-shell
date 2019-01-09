@@ -1,3 +1,5 @@
+// compile: g++ -Wall -O2 shell.cpp -o shell
+
 #include <sys/socket.h>
 
 #include <sys/un.h>
@@ -8,6 +10,7 @@
 #include <unistd.h>
 
 #include <errno.h>
+#include <cstring>
 
 #include <stdio.h>
 
@@ -20,25 +23,24 @@ using namespace std;
 
 extern char **environ;
 
-int STD_FDS[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
-#define STD_FDS_SIZE sizeof(STD_FDS)
-
-int main() {
-    char socket_path[] = "./unix_socket";
+bool run() {
+    const int STD_FDS[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    const int STD_FDS_SIZE = sizeof(STD_FDS);
+    const char socket_path[] = "/home/test/unix_socket";
     int sock;
 
     if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
         eprintf("Socket error %d: %s\n", errno, strerror(errno));
-        return -1;
+        return false;
     }
 
-    struct sockaddr_un addr = {};
+    struct sockaddr_un addr = {0};
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
 
     if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         eprintf("Connect error %d: %s\n", errno, strerror(errno));
-        return -1;
+        return false;
     }
 
 
@@ -48,21 +50,20 @@ int main() {
     // https://linux.die.net/man/3/cmsg
 
     char cmsgbuf[CMSG_SPACE(STD_FDS_SIZE)] = {0}; // CMSG_SPACE - full section size with headers and padding
-    struct msghdr msg = {
-        .msg_name = NULL,                 // filled by recv
-        .msg_namelen = 0,                 // filled by recv
-        .msg_iov = NULL,                  // pointer to iovec array, filled later
-        .msg_iovlen = 0,                  // iovecs in array, filled later
-        .msg_control = cmsgbuf,           // ancillary data buffer
-        .msg_controllen = sizeof(cmsgbuf),// ancillary data buffer length
-        .msg_flags = 0                    // filled by recv
-    };
+    struct msghdr msg = {0};
+
+    msg.msg_name = NULL;                  // filled by recv
+    msg.msg_namelen = 0;                  // filled by recv
+    msg.msg_iov = NULL;                   // pointer to iovec array, filled later
+    msg.msg_iovlen = 0;                   // iovecs in array, filled later
+    msg.msg_control = cmsgbuf;            // ancillary data buffer
+    msg.msg_controllen = sizeof(cmsgbuf); // ancillary data buffer length
+    msg.msg_flags = 0;                    // filled by recv
 
     struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); // pointer to the first cmsghdr struct
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(STD_FDS_SIZE);
-    msg.msg_controllen = sizeof(cmsgbuf);
 
     int* fdptr = (int *) CMSG_DATA(cmsg); // pointer to data (follows header and padding)
 
@@ -86,8 +87,8 @@ int main() {
 
     // Go again through array, fill in iovec structs
     while(*environ_p){
-        iov_p->iov_base = *environ_p;          // String start address
-        iov_p->iov_len = strlen(*environ_p)+1; // String length in bytes, +1 to capture \0
+        iov_p->iov_base = *environ_p;           // String start address
+        iov_p->iov_len = strlen(*environ_p)+1;  // String length in bytes, +1 to capture \0
 
         environ_p++;
         iov_p++;
@@ -102,7 +103,7 @@ int main() {
 
         free(iov);
         close(sock);
-        return -1;
+        return false;
     }
 
     free(iov);
@@ -125,7 +126,14 @@ int main() {
 
     // TODO: change signal mask, check if all signals are passed through
 
-    for (;;) {pause();}  // just hang in there for ssh not to close connection
+    return true;
+}
 
-    return 0;
+
+int main() {
+    if(run()){
+        for (;;) {pause();}  // just hang in there for ssh not to close connection
+        return 0;
+    }
+    return -1;
 }
