@@ -2,6 +2,8 @@ import os
 from handlers import ThreadedHandler, server_socket
 from parser import MAX_DATA_SIZE, ANCDATA_SIZE
 
+from settings import SOCK
+
 
 class Handler(ThreadedHandler):
     def handle(self):
@@ -31,7 +33,7 @@ class Handler(ThreadedHandler):
 
 
 def main():
-    with server_socket('/home/test/unix_socket', 0o770, 'root', 'test') as sock:
+    with server_socket(SOCK.PATH, SOCK.PERM, SOCK.USER, SOCK.GROUP) as sock:
         print('Server initialized, waiting for connections...')
         while True:
             data, ancdata, _, _ = sock.recvmsg(MAX_DATA_SIZE, ANCDATA_SIZE)

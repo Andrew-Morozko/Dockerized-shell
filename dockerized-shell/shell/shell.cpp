@@ -20,13 +20,20 @@
 
 using namespace std;
 
+#ifdef SOCKET_PATH
+    #define STRINGIZE(x) #x
+    #define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
+    #define SOCKET_PATH_STR STRINGIZE_VALUE_OF(SOCKET_PATH)
+#else
+    #error SOCKET_PATH is not defined. Define it as a compiler argument: -D SOCKET_PATH="/my/path"
+#endif
 
 extern char **environ;
 
 bool run() {
     const int STD_FDS[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     const int STD_FDS_SIZE = sizeof(STD_FDS);
-    const char socket_path[] = "/home/test/unix_socket";
+
     int sock;
 
     if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
@@ -36,7 +43,7 @@ bool run() {
 
     struct sockaddr_un addr = {0};
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
+    strncpy(addr.sun_path, SOCKET_PATH_STR, sizeof(addr.sun_path)-1);
 
     if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         eprintf("Connect error %d: %s\n", errno, strerror(errno));
