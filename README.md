@@ -1,4 +1,10 @@
+# Your yearly rewrite has arrived
+
+This repo is obsoleted by [Orca](https://github.com/Andrew-Morozko/orca) - more flexible container creation tool written in go. Both SSH and HTTP clients are supported.
+
+--------
 # Dockerized shell v2.0
+
 System for creating fresh docker container for every ssh connection.
 
 **WARNING**: Alpha version, do not use for production.
